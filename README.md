@@ -56,6 +56,4 @@ $ npm run test:cov
 
 ## Reference
 
-[https://blog.csdn.net/qq1195566313/category_11844396.html](https://blog.csdn.net/qq1195566313/category_11844396.html)
-
-[https://stackoverflow.com/questions/51116044/loading-of-port-number-for-nest-js-application-from-json-module](https://stackoverflow.com/questions/51116044/loading-of-port-number-for-nest-js-application-from-json-module)
+  [NestJS Tutorial](https://www.gausszhou.top/backend/framework/nestjs/)
