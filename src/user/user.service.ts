@@ -1,97 +1,65 @@
-import { HttpException, HttpStatus, Injectable, Res } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateUserDto, UpdateUserDto } from './user.dto';
-
-export interface User {
-  id: number | string;
-  accountName: string;
-  nickName: string;
-  password: string;
-  delete: '0' | '1';
-}
-
-export interface UserInfo {
-  id: number | string;
-  accountName: string;
-  nickName: string;
-}
-
-const users: User[] = [
-  {
-    id: 1,
-    accountName: 'default',
-    nickName: '默认账号',
-    password: 'admin',
-    delete: '0',
-  },
-];
+import { User } from './user.entity';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UserService {
-  public create(createUserDto: CreateUserDto) {
-    const user: User = {
-      id: users.length + 1,
-      accountName: createUserDto.accountName,
-      nickName: createUserDto.nickName,
-      password: createUserDto.password,
-      delete: '0',
-    };
-    users.push(user);
-    return {
-      statusCode: 200,
-      message: 'add user success !',
-    };
+  constructor(
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
+  ) {}
+
+  // async validateUser(accountName: string, password: string): Promise<User> {
+  //   const user = await this.findByAccountName(accountName);
+  //   if (user && (await bcrypt.compare(password, user.password))) {
+  //     return user;
+  //   }
+  //   return null;
+  // }
+
+  // async findByAccountName(accountName: string): Promise<User> {
+  //   return this.userRepository.findOne({ accountName });
+  // }
+
+  async create(createUserDto: CreateUserDto) {
+    const user = new User();
+    user.accountName = createUserDto.accountName;
+    user.nickName = createUserDto.nickName;
+    user.password = await bcrypt.hash(createUserDto.password, 10);
+    return this.userRepository.save(user);
   }
 
-  public update(id: string, updateUserDto: UpdateUserDto) {
-    const userIndex = users.findIndex((user) => user.id === id);
-    if (userIndex > -1) {
-      if (updateUserDto.accountName)
-        users[userIndex].accountName = updateUserDto.accountName;
-      if (updateUserDto.password)
-        users[userIndex].password = updateUserDto.password;
-      return {
-        statusCode: 200,
-        message: 'update user success !',
-      };
-    }
-    throw new HttpException('用户不存在', HttpStatus.FORBIDDEN);
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    const user = await this.userRepository.findOne({
+      where: {
+        id: parseInt(id),
+      },
+    });
+    user.nickName = updateUserDto.nickName;
+    user.password = await bcrypt.hash(updateUserDto.password, 10);
+    return this.userRepository.save(user);
   }
 
-  public delete(id: string) {
-    const userIndex = users.findIndex((user) => user.id === id);
-    if (userIndex > -1) {
-      users[userIndex].delete = '1';
-      return {
-        statusCode: 200,
-        message: 'delete user success !',
-      };
-    }
-    throw new HttpException('用户不存在', HttpStatus.FORBIDDEN);
+  async delete(id: string) {
+    return this.userRepository.delete(id);
   }
 
-  public findOne(id: string) {
-    const userIndex = users.findIndex((user) => user.id === +id);
-    if (userIndex > -1) {
-      const user = users[userIndex];
-      const userInfo: UserInfo = {
-        id: user.id,
-        accountName: user.accountName,
-        nickName: user.accountName,
-      };
-      return userInfo;
-    }
-    throw new HttpException('用户不存在', HttpStatus.FORBIDDEN);
+  async findOne(id: string) {
+    const user = await this.userRepository.findOne({
+      where: {
+        id: parseInt(id),
+      },
+    });
+    return user;
   }
-  public findAll(page: number = 1, pageSize: number = 10) {
-    const userInfoList: UserInfo[] = users
-      .filter((user) => user.delete === '0')
-      .map((user) => {
-        return {
-          id: user.id,
-          accountName: user.accountName,
-          nickName: user.nickName,
-        };
-      });
-    return userInfoList;
+  async findAll(page = 1, pageSize = 10): Promise<User[]> {
+    const userList = await this.userRepository.find({
+      select: ['id', 'accountName', 'nickName'],
+      skip: pageSize * (page - 1),
+      take: pageSize,
+    });
+    return userList;
   }
 }
